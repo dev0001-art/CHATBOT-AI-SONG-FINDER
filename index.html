@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>VibeTune AI Song Finder</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;500;700;800&family=Space+Grotesk:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./styles.css" />
+    <script src="./script.js" defer></script>
+  </head>
+  <body>
+    <div class="page-shell">
+      <aside class="profile-panel">
+        <p class="eyebrow">Mood-led playlist guide</p>
+        <h1>VibeTune</h1>
+        <p class="panel-copy">
+          Tell the chatbot how you feel and it will turn that mood into fresh
+          song picks.
+        </p>
+
+        <section class="profile-card">
+          <h2>Your profile</h2>
+          <label for="nameInput">Name</label>
+          <input id="nameInput" type="text" placeholder="Your name" />
+
+          <label for="languageInput">Preferred language</label>
+          <select id="languageInput">
+            <option value="">Any</option>
+            <option value="English">English</option>
+            <option value="Hindi">Hindi</option>
+            <option value="Punjabi">Punjabi</option>
+          </select>
+
+          <label for="genreInput">Go-to genre</label>
+          <input
+            id="genreInput"
+            type="text"
+            placeholder="For example: indie pop"
+          />
+
+          <button id="saveProfileBtn" class="primary-btn" type="button">
+            Save profile
+          </button>
+          <p id="profileStatus" class="status-text" aria-live="polite"></p>
+        </section>
+
+        <section class="profile-card mood-shortcuts">
+          <h2>Quick moods</h2>
+          <div class="mood-grid">
+            <button class="mood-chip" data-mood="happy" type="button">
+              <span class="mood-icon" aria-hidden="true">☀</span>
+              <span>Happy</span>
+            </button>
+            <button class="mood-chip" data-mood="romantic" type="button">
+              <span class="mood-icon" aria-hidden="true">♥</span>
+              <span>Romantic</span>
+            </button>
+            <button class="mood-chip" data-mood="calm" type="button">
+              <span class="mood-icon" aria-hidden="true">☾</span>
+              <span>Calm</span>
+            </button>
+            <button class="mood-chip" data-mood="focused" type="button">
+              <span class="mood-icon" aria-hidden="true">◎</span>
+              <span>Focused</span>
+            </button>
+            <button class="mood-chip" data-mood="energetic" type="button">
+              <span class="mood-icon" aria-hidden="true">⚡</span>
+              <span>Energetic</span>
+            </button>
+            <button class="mood-chip" data-mood="heartbroken" type="button">
+              <span class="mood-icon" aria-hidden="true">💔</span>
+              <span>Heartbroken</span>
+            </button>
+          </div>
+        </section>
+      </aside>
+
+      <main class="chat-panel">
+        <section class="hero-card">
+          <p class="eyebrow">Chatbot AI Song Finder</p>
+          <h2>Music recommendations shaped around your mood</h2>
+          <p>
+            Try messages like “I need calm late-night songs” or “I’m feeling
+            hyped for the gym.” Recommendations are fetched from Apple Music.
+          </p>
+        </section>
+
+        <section id="chatLog" class="chat-log" aria-live="polite"></section>
+
+        <form id="chatForm" class="chat-form">
+          <label class="sr-only" for="chatInput">Describe your mood</label>
+          <input
+            id="chatInput"
+            name="chatInput"
+            type="text"
+            placeholder="How are you feeling right now?"
+            autocomplete="off"
+          />
+          <button class="primary-btn" type="submit">Find songs</button>
+        </form>
+
+        <div class="more-actions">
+          <button id="moreSongsBtn" class="secondary-btn" type="button">
+            More songs
+          </button>
+        </div>
+
+        <section class="favorites-panel">
+          <div class="favorites-header">
+            <p class="eyebrow">Saved songs</p>
+            <h2>Your favorites</h2>
+          </div>
+          <div id="favoritesList" class="favorites-list"></div>
+        </section>
+      </main>
+    </div>
+  </body>
+</html>
