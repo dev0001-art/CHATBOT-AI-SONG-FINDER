@@ -718,6 +718,11 @@ function searchITunes({ term, limit = 10, country = "US" }) {
   });
 }
 
+function buildAppleMusicSearchUrl(trackName, artistName, country = "us") {
+  const query = encodeURIComponent(`${trackName} ${artistName}`);
+  return `https://music.apple.com/${country.toLowerCase()}/search?term=${query}`;
+}
+
 function appendMessage(role, text, recommendations = []) {
   const article = document.createElement("article");
   article.className = `message ${role}`;
@@ -742,6 +747,7 @@ function appendMessage(role, text, recommendations = []) {
 
     recommendations.forEach((track) => {
       const trackId = `${track.trackName}-${track.artistName}`;
+      const fallbackUrl = buildAppleMusicSearchUrl(track.trackName, track.artistName, track.country || "us");
       const card = document.createElement("section");
       card.className = "recommendation-card";
       card.innerHTML = `
@@ -750,7 +756,7 @@ function appendMessage(role, text, recommendations = []) {
           <p>${escapeHtml(track.artistName)}</p>
           <p class="recommendation-meta">${escapeHtml(track.collectionName || "Single")}</p>
           <div class="recommendation-actions">
-            <a class="track-link" href="${track.trackViewUrl}" target="_blank" rel="noreferrer">Open in Apple Music</a>
+            <a class="track-link" href="${fallbackUrl}" target="_blank" rel="noreferrer">Open on Apple Music</a>
             <button class="track-link save-favorite-btn" type="button" data-track-id="${escapeHtml(trackId)}">Save</button>
           </div>
         </div>
@@ -837,7 +843,7 @@ function saveFavorite(track) {
     trackName: track.trackName,
     artistName: track.artistName,
     collectionName: track.collectionName || "Single",
-    trackViewUrl: track.trackViewUrl,
+    trackViewUrl: buildAppleMusicSearchUrl(track.trackName, track.artistName, track.country || "us"),
   });
 
   localStorage.setItem(FAVORITES_KEY, JSON.stringify(favorites.slice(0, 12)));
