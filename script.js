@@ -12,9 +12,10 @@ const chatInput = document.querySelector("#chatInput");
 const moodChips = document.querySelectorAll(".mood-chip");
 const moreSongsBtn = document.querySelector("#moreSongsBtn");
 const favoritesList = document.querySelector("#favoritesList");
+const savedUsersList = document.querySelector("#savedUsers");
 
-const PROFILE_KEY = "vibetune-profile";
-const FAVORITES_KEY = "vibetune-favorites";
+const USERS_KEY = "vibetune-users";
+const ACTIVE_USER_KEY = "vibetune-active-user";
 const recommendationState = {
   message: "",
   moodKey: "",
@@ -22,6 +23,7 @@ const recommendationState = {
   lastCount: 0,
   songQuery: "",
 };
+let activeUserId = "";
 
 const languageConfigs = {
   English: { country: "US", hint: "english songs" },
@@ -229,11 +231,14 @@ let loadingMessageElement = null;
 loadProfile();
 seedIntro();
 renderFavorites();
+renderUserSuggestions();
 
 saveProfileBtn.addEventListener("click", () => {
-  const profile = getProfile();
-  localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
-  profileStatus.textContent = `Saved for ${profile.name || "your next visit"}.`;
+  saveCurrentProfile();
+});
+
+profileInputs.name.addEventListener("change", () => {
+  tryLoadUserByName(profileInputs.name.value);
 });
 
 chatForm.addEventListener("submit", async (event) => {
@@ -271,20 +276,18 @@ moreSongsBtn.addEventListener("click", async () => {
 });
 
 function loadProfile() {
-  const saved = localStorage.getItem(PROFILE_KEY);
-  if (!saved) {
+  const savedUserId = localStorage.getItem(ACTIVE_USER_KEY);
+  if (!savedUserId) {
     return;
   }
 
-  try {
-    const profile = JSON.parse(saved);
-    profileInputs.name.value = profile.name || "";
-    profileInputs.language.value = profile.language || "";
-    profileInputs.genre.value = profile.genre || "";
-    profileStatus.textContent = `Welcome back${profile.name ? `, ${profile.name}` : ""}.`;
-  } catch (error) {
-    profileStatus.textContent = "";
+  const users = getStoredUsers();
+  const user = users[savedUserId];
+  if (!user) {
+    return;
   }
+
+  setActiveUser(savedUserId, user, true);
 }
 
 function getProfile() {
@@ -293,6 +296,92 @@ function getProfile() {
     language: profileInputs.language.value,
     genre: profileInputs.genre.value.trim(),
   };
+}
+
+function getStoredUsers() {
+  try {
+    return JSON.parse(localStorage.getItem(USERS_KEY) || "{}");
+  } catch (error) {
+    return {};
+  }
+}
+
+function setStoredUsers(users) {
+  localStorage.setItem(USERS_KEY, JSON.stringify(users));
+}
+
+function normalizeUserId(name) {
+  return normalizeText(name);
+}
+
+function renderUserSuggestions() {
+  const users = getStoredUsers();
+  savedUsersList.innerHTML = "";
+
+  Object.values(users)
+    .sort((a, b) => a.name.localeCompare(b.name))
+    .forEach((user) => {
+      const option = document.createElement("option");
+      option.value = user.name;
+      savedUsersList.appendChild(option);
+    });
+}
+
+function setActiveUser(userId, user, isWelcome = false) {
+  activeUserId = userId;
+  localStorage.setItem(ACTIVE_USER_KEY, userId);
+  profileInputs.name.value = user.name || "";
+  profileInputs.language.value = user.language || "";
+  profileInputs.genre.value = user.genre || "";
+  renderFavorites();
+  profileStatus.textContent = isWelcome
+    ? `Welcome back${user.name ? `, ${user.name}` : ""}.`
+    : `Loaded ${user.name}'s profile.`;
+}
+
+function tryLoadUserByName(name) {
+  const userId = normalizeUserId(name);
+  if (!userId) {
+    return;
+  }
+
+  const users = getStoredUsers();
+  const user = users[userId];
+  if (!user) {
+    return;
+  }
+
+  setActiveUser(userId, user, true);
+}
+
+function saveCurrentProfile() {
+  const profile = getProfile();
+  if (!profile.name) {
+    profileStatus.textContent = "Enter your name to save your profile.";
+    return;
+  }
+
+  const userId = normalizeUserId(profile.name);
+  const users = getStoredUsers();
+  const existingUser = users[userId];
+  const preferencesChanged =
+    existingUser &&
+    (existingUser.language !== profile.language || existingUser.genre !== profile.genre);
+
+  users[userId] = {
+    name: profile.name,
+    language: profile.language,
+    genre: profile.genre,
+    favorites: preferencesChanged ? [] : existingUser?.favorites || [],
+  };
+
+  setStoredUsers(users);
+  renderUserSuggestions();
+  setActiveUser(userId, users[userId]);
+
+  profileStatus.textContent = preferencesChanged
+    ? `Saved ${profile.name}. Preferences changed, so liked songs were reset.`
+    : `Saved for ${profile.name}.`;
 }
 
 function seedIntro() {
@@ -821,14 +910,20 @@ function escapeHtml(value) {
 }
 
 function getFavorites() {
-  try {
-    return JSON.parse(localStorage.getItem(FAVORITES_KEY) || "[]");
-  } catch (error) {
+  if (!activeUserId) {
     return [];
   }
+
+  const users = getStoredUsers();
+  return users[activeUserId]?.favorites || [];
 }
 
 function saveFavorite(track) {
+  if (!activeUserId) {
+    appendMessage("assistant", "Save your profile first so I can remember your liked songs.");
+    return;
+  }
+
   const favorites = getFavorites();
   const exists = favorites.some(
     (item) => item.trackName === track.trackName && item.artistName === track.artistName
@@ -846,7 +941,9 @@ function saveFavorite(track) {
     trackViewUrl: buildAppleMusicSearchUrl(track.trackName, track.artistName, track.country || "us"),
   });
 
-  localStorage.setItem(FAVORITES_KEY, JSON.stringify(favorites.slice(0, 12)));
+  const users = getStoredUsers();
+  users[activeUserId].favorites = favorites.slice(0, 12);
+  setStoredUsers(users);
   renderFavorites();
   appendMessage("assistant", `Saved "${track.trackName}" to your favorites.`);
 }
@@ -885,11 +982,17 @@ function renderFavorites() {
 }
 
 function removeFavorite(track) {
+  if (!activeUserId) {
+    return;
+  }
+
   const favorites = getFavorites().filter(
     (item) => !(item.trackName === track.trackName && item.artistName === track.artistName)
   );
 
-  localStorage.setItem(FAVORITES_KEY, JSON.stringify(favorites));
+  const users = getStoredUsers();
+  users[activeUserId].favorites = favorites;
+  setStoredUsers(users);
   renderFavorites();
   appendMessage("assistant", `Removed "${track.trackName}" from your favorites.`);
 }
